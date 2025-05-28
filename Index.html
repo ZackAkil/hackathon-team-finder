@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>Find Your Team & Teammates</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      line-height: 1.6;
+      margin: 20px;
+      background-color: #f8f8f8;
+      text-align: center; /* Center content */
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+    }
+    #status {
+      font-style: italic;
+      color: #777;
+      min-height: 1.5em; /* Reserve space */
+    }
+    .loading {
+      color: #007bff;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+
+    /* Input and Autocomplete Styles */
+    .input-autocomplete-container {
+        position: relative; /* Needed for absolute positioning of suggestions */
+        width: 80%; /* Adjust width as needed */
+        max-width: 500px; /* Max width for larger screens */
+        margin: 20px auto 0 auto; /* Center it below status */
+        text-align: left; /* Align label/input left within container */
+    }
+    label {
+        font-weight: bold;
+        margin-bottom: 5px;
+        display: block; /* Make label take its own line */
+    }
+    #nameInput {
+        width: 100%; /* Take full width of container */
+        padding: 12px 10px; /* Adjust padding */
+        font-size: 20px; /* Make input text bigger */
+        border: 1px solid #ccc;
+        box-sizing: border-box; /* Include padding/border in width */
+        margin-bottom: 0; /* Remove bottom margin */
+        outline: none; /* Remove default outline */
+        transition: border-color 0.2s ease-in-out;
+    }
+    #nameInput:focus {
+        border-color: #007bff; /* Highlight on focus */
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.2);
+    }
+
+    .suggestions-container {
+        position: absolute; /* Position relative to parent container */
+        top: 100%; /* Position right below the input */
+        left: 0;
+        right: 0;
+        border: 1px solid #ddd;
+        border-top: none; /* Connect visually to input */
+        max-height: 180px; /* Limit height with scroll */
+        overflow-y: auto;
+        z-index: 10; /* Ensure it's above other content */
+        background-color: white;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Add a shadow */
+        display: none; /* Hidden by default */
+    }
+
+    .suggestion-item {
+        padding: 10px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+        background-color: #fff;
+        font-size: 16px;
+    }
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+    .suggestion-item:hover {
+        background-color: #f0f0f0;
+    }
+
+    /* Team Output Styles (Big and Sparkly) */
+    #teamOutput {
+        margin-top: 40px;
+        text-align: center;
+        font-size: 3em; /* Very Big */
+        font-weight: bold;
+        padding: 20px;
+        min-height: 1.5em; /* Reserve space */
+        /* Styling for "sparkly" will be applied dynamically */
+    }
+
+    .sparkly {
+        background: linear-gradient(to right, #ff7e5f, #feb47b, #ff9966); /* Warm gradient */
+        -webkit-background-clip: text; /* Apply gradient to text (for Webkit browsers) */
+        -webkit-text-fill-color: transparent; /* Make text transparent (for Webkit browsers) */
+        background-clip: text; /* Standard property */
+        text-fill-color: transparent; /* Standard property */
+        animation: sparkly-glow 2s ease-in-out infinite alternate; /* Pulsing glow animation */
+        text-shadow: 0 0 8px rgba(255, 153, 102, 0.4), 0 0 15px rgba(255, 180, 123, 0.3); /* Initial shadow */
+    }
+
+    @keyframes sparkly-glow {
+      from {
+        text-shadow: 0 0 8px rgba(255, 153, 102, 0.4), 0 0 15px rgba(255, 180, 123, 0.3);
+      }
+      to {
+        text-shadow: 0 0 15px rgba(255, 153, 102, 0.8), 0 0 25px rgba(255, 180, 123, 0.7), 0 0 35px rgba(255, 153, 102, 0.5);
+      }
+    }
+
+     /* Style for messages when no match or info missing */
+     .not-found {
+        color: #555; /* Greyish text */
+        font-size: 1.2em; /* Slightly smaller than sparkly */
+        font-weight: normal;
+        background: none;
+        text-shadow: none;
+        animation: none;
+        -webkit-text-fill-color: #555;
+        text-fill-color: #555;
+     }
+
+     /* Teammates Section Styles */
+     #teammatesOutput {
+        margin-top: 30px;
+        text-align: center;
+     }
+
+     #teammatesOutput h2 {
+        color: #444;
+        font-size: 1.8em;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 5px;
+        display: inline-block; /* Shrink border width to content */
+     }
+
+     #teammatesList {
+        list-style: none; /* Remove default list bullets */
+        padding: 0;
+        margin: 0 auto; /* Center the list */
+        max-width: 400px; /* Limit list width */
+     }
+
+     #teammatesList li {
+        background-color: #fff;
+        border: 1px solid #ddd;
+        margin-bottom: 8px;
+        padding: 12px;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        text-align: left; /* Align list items left */
+        font-size: 1.1em;
+        color: #333;
+     }
+
+
+  </style>
+</head>
+<body>
+  <h1>Find Your Team & Teammates</h1>
+
+  <p id="status" class="loading">Loading data...</p>
+
+  <div id="inputArea" class="input-autocomplete-container" style="display: none;">
+    <label for="nameInput">Enter Your Name:</label>
+    <input type="text" id="nameInput" placeholder="e.g., Zack">
+    <div id="autocomplete-suggestions" class="suggestions-container"></div>
+  </div>
+
+  <div id="teamOutput">
+    <!-- Team name or message will appear here -->
+  </div>
+
+  <div id="teammatesOutput" style="display: none;">
+      <h2>Teammates</h2>
+      <ul id="teammatesList">
+          <!-- Teammates will be listed here -->
+      </ul>
+  </div>
+
+
+  <script>
+    // Store the sheet data globally accessible within this script block
+    let sheetData = [];
+    const nameColumnIndex = 0; // Assuming Name is the first column (index 0)
+    const teamColumnIndex = 3; // Assuming Team is the fourth column (index 3)
+
+
+    /**
+     * Calls the server-side function to get sheet data.
+     */
+    function loadData() {
+      document.getElementById('status').textContent = 'Loading data...';
+      document.getElementById('status').className = 'loading';
+      // Clear output areas while loading
+      document.getElementById('teamOutput').textContent = '';
+      document.getElementById('teamOutput').className = '';
+      document.getElementById('teammatesOutput').style.display = 'none';
+
+
+      google.script.run
+          .withSuccessHandler(displayData)
+          .withFailureHandler(showError)
+          .getSheetData(); // Call the Apps Script function named getSheetData
+    }
+
+    /**
+     * Callback function executed when getSheetData is successful.
+     * Stores the data and sets up the input/autocomplete.
+     * @param {Array<Array<any>>} data - The 2D array of data from the sheet.
+     */
+    function displayData(data) {
+      // Assuming data format is: [ [Headers], [Row1], [Row2], ... ]
+      if (data && data.length > 1) { // Check if there's at least a header and one data row
+        sheetData = data.slice(1); // Store data rows (excluding header)
+        document.getElementById('status').style.display = 'none'; // Hide loading status
+        document.getElementById('inputArea').style.display = 'block'; // Show the input area
+
+        const nameInput = document.getElementById('nameInput');
+
+        // Add event listeners for the input field
+        nameInput.addEventListener('input', handleInput); // Use 'input' for real-time changes
+        // Add a slight delay to hide suggestions on blur, allowing click on suggestion
+        nameInput.addEventListener('blur', () => {
+            setTimeout(() => {
+                 document.getElementById('autocomplete-suggestions').style.display = 'none';
+            }, 100); // 100ms delay
+        });
+        // Optionally, show suggestions again if input is focused and has text
+        nameInput.addEventListener('focus', handleInput);
+
+
+      } else {
+        // Handle case where data is empty or only headers
+        document.getElementById('status').textContent = 'No data found in the sheet.';
+        document.getElementById('status').className = 'not-found';
+        document.getElementById('inputArea').style.display = 'none'; // Hide input area
+      }
+    }
+
+    /**
+     * Handles input changes in the name field for both autocomplete and lookup.
+     */
+    function handleInput() {
+      const nameInput = document.getElementById('nameInput');
+      const teamOutput = document.getElementById('teamOutput');
+      const teammatesOutput = document.getElementById('teammatesOutput');
+      const autocompleteSuggestionsContainer = document.getElementById('autocomplete-suggestions');
+      const inputValue = nameInput.value.trim();
+
+      // Clear previous output and suggestions
+      teamOutput.textContent = '';
+      teamOutput.className = ''; // Reset class
+      teammatesOutput.style.display = 'none'; // Hide teammates section
+      document.getElementById('teammatesList').innerHTML = ''; // Clear the list
+      autocompleteSuggestionsContainer.innerHTML = ''; // Clear suggestions list
+      autocompleteSuggestionsContainer.style.display = 'none'; // Hide container by default
+
+
+      if (inputValue.length === 0) {
+        // If input is empty, just clear and hide
+        return;
+      }
+
+      // --- Autocomplete Logic ---
+      // Get list of names from the first column of our stored data
+      const namesInSheet = sheetData.map(row => row[nameColumnIndex] ? row[nameColumnIndex].toString().trim() : '');
+
+      // Filter names that start with the input value (case-insensitive) and are not empty
+      const filteredNames = namesInSheet.filter(name =>
+         name.toLowerCase().startsWith(inputValue.toLowerCase()) && name.length > 0
+      );
+
+      if (filteredNames.length > 0) {
+        // Sort suggestions alphabetically and remove duplicates
+        const uniqueFilteredNames = [...new Set(filteredNames)].sort();
+
+        uniqueFilteredNames.forEach(name => {
+            const suggestionDiv = document.createElement('div');
+            suggestionDiv.classList.add('suggestion-item');
+            suggestionDiv.textContent = name;
+
+            // Use mousedown event to handle click before the input's blur event fires
+            suggestionDiv.addEventListener('mousedown', () => {
+                nameInput.value = name; // Set input value to the selected suggestion
+                autocompleteSuggestionsContainer.style.display = 'none'; // Hide suggestions
+                lookupTeamAndTeammates(name); // Immediately perform lookup with the selected name
+            });
+            autocompleteSuggestionsContainer.appendChild(suggestionDiv);
+        });
+        // Show the suggestions container if there are items
+        autocompleteSuggestionsContainer.style.display = 'block';
+      }
+
+      // --- Lookup Logic ---
+      // Perform lookup for an exact match of the current input value
+      lookupTeamAndTeammates(inputValue);
+    }
+
+    /**
+     * Looks up the team and teammates for a given name.
+     * @param {string} nameToLookup - The name to find the team and teammates for.
+     */
+    function lookupTeamAndTeammates(nameToLookup) {
+      const teamOutput = document.getElementById('teamOutput');
+      const teammatesOutput = document.getElementById('teammatesOutput');
+      const teammatesList = document.getElementById('teammatesList');
+
+      teamOutput.textContent = ''; // Clear team output
+      teamOutput.className = ''; // Reset team class
+      teammatesOutput.style.display = 'none'; // Hide teammates section
+      teammatesList.innerHTML = ''; // Clear the list
+
+      if (nameToLookup.length === 0) {
+           // If name is empty, do nothing
+           return;
+      }
+
+      // Find the row where the first column (name) exactly matches nameToLookup (case-insensitive)
+      const foundRow = sheetData.find(row =>
+           row[nameColumnIndex] && row[nameColumnIndex].toString().trim().toLowerCase() === nameToLookup.toLowerCase()
+      );
+
+      if (foundRow) {
+        const teamName = foundRow[teamColumnIndex]; // Team is the 4th column (index 3)
+
+        if (teamName) {
+          // --- Display Team Name ---
+          teamOutput.textContent = teamName.toString(); // Display the team name
+          teamOutput.className = 'sparkly'; // Add sparkly styling class
+
+          // --- Find and Display Teammates ---
+          // Filter all data rows to find members of the same team (excluding the person themselves)
+          const teamMembers = sheetData.filter(row =>
+              row[teamColumnIndex] && // Make sure team column is not empty
+              row[teamColumnIndex].toString().trim() === teamName.toString().trim() && // Same team
+              row[nameColumnIndex] && // Make sure name column is not empty
+              row[nameColumnIndex].toString().trim().toLowerCase() !== nameToLookup.toLowerCase() // Not the person themselves
+          );
+
+          if (teamMembers.length > 0) {
+              teamMembers.forEach(memberRow => {
+                  const memberName = memberRow[nameColumnIndex].toString();
+                  const listItem = document.createElement('li');
+                  listItem.textContent = memberName;
+                  teammatesList.appendChild(listItem);
+              });
+              teammatesOutput.style.display = 'block'; // Show the teammates section
+          } else {
+              // Case where the person is found, team is found, but no other members in that team
+              const listItem = document.createElement('li');
+              listItem.textContent = `No other members found for ${teamName}.`;
+              listItem.style.fontStyle = 'italic';
+              listItem.style.color = '#666';
+              teammatesList.appendChild(listItem);
+              teammatesOutput.style.display = 'block'; // Still show the section header
+          }
+
+        } else {
+          // Case where name is found but team column is empty
+          teamOutput.textContent = 'Team information missing for this name.';
+          teamOutput.className = 'not-found';
+          teammatesOutput.style.display = 'none'; // Hide teammates section if no team
+        }
+      } else {
+        // Case where name is not found
+        // teamOutput is already cleared
+        // teammatesOutput is already hidden
+         // We could add a "Name not found" message here, but relying on autocomplete is better
+      }
+    }
+
+
+    /**
+     * Callback function executed if getSheetData fails.
+     * @param {Error} error - The error object.
+     */
+    function showError(error) {
+      console.error("Error fetching data: ", error);
+      document.getElementById('status').textContent = 'Error loading data. Please try again later.';
+      document.getElementById('status').className = 'error';
+      document.getElementById('inputArea').style.display = 'none'; // Hide input if data failed
+      document.getElementById('teamOutput').textContent = 'Could not load data.';
+      document.getElementById('teamOutput').className = 'error';
+      document.getElementById('teammatesOutput').style.display = 'none'; // Hide teammates section if data failed
+    }
+
+    // Load data when the page finishes loading
+    window.onload = loadData;
+
+  </script>
+</body>
+</html>
